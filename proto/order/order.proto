@@ -1,0 +1,28 @@
+syntax = "proto3";
+package order;
+option go_package = "github.com/DinukaKaveen/Golang-gRPC-Microservices/proto/order/generated";
+
+service OrderService {
+    rpc CreateOrder (OrderRequest) returns (OrderResponse) {}
+    rpc GetOrder (GetOrderRequest) returns (GetOrderResponse) {}
+}
+
+message OrderRequest {
+    string user_id = 1;
+    float amount = 2;
+}
+
+message OrderResponse {
+    string order_id = 1;
+    string status = 2;
+}
+
+message GetOrderRequest {
+    string order_id = 1;
+}
+
+message GetOrderResponse {
+    string order_id = 1;
+    string user_id = 2;
+    string status = 3;
+}
