@@ -1,13 +1,19 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"log"
+	"os"
+	"time"
 
 	pb "github.com/DinukaKaveen/Golang-gRPC-Microservices/proto/order/generated"
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/gofiber/fiber/v2"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 )
 
 type User struct {
@@ -15,9 +21,34 @@ type User struct {
 	Name string `json:"name"`
 }
 
+// Generates JWT token for authentication (in production, use environment variables or a secret manager)
+const jwtSecret = "my-secret-key"
+func GenerateJWT() (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"service": "user-service",
+		"exp":     time.Now().Add(time.Hour * 1).Unix(),
+	})
+	return token.SignedString([]byte(jwtSecret))
+}
+
 func main() {
+	// Load client TLS credentials
+	caCert, err := os.ReadFile("certs/ca.crt")
+	if err != nil {
+		log.Fatalf("Failed to read CA cert: %v", err)
+	}
+	certPool := x509.NewCertPool()
+	if !certPool.AppendCertsFromPEM(caCert) {
+		log.Fatalf("Failed to append CA cert")
+	}
+	// Create TLS credentials
+	tlsConfig := &tls.Config {
+		RootCAs: certPool,
+	}
+	creds := credentials.NewTLS(tlsConfig)
+
 	// Create new gRPC client to connect to Order Service gRPC
-	conn, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(creds))
 	if err != nil {
 		log.Fatalf("Failed to connect to order service: %v", err)
 	}
@@ -35,8 +66,15 @@ func main() {
 	app.Post("/users/:id/order", func(c *fiber.Ctx) error {
 		userId := c.Params("id")
 
+		// Generate JWT token and Add to gRPC metadata
+		token, err := GenerateJWT()
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate JWT"})
+		}
+		ctx := metadata.AppendToOutgoingContext(c.Context(), "authorization", "Bearer "+token)
+
 		// Call gRPC CreateOrder method
-		resp, err := orderClient.CreateOrder(c.Context(), &pb.OrderRequest{
+		resp, err := orderClient.CreateOrder(ctx, &pb.OrderRequest{
 			UserId: userId,
 			Amount: 100.00,
 		})
@@ -56,8 +94,15 @@ func main() {
 		userId := c.Params("userId")
 		orderId := c.Params("orderId")
 
+		// Generate JWT token and Add to gRPC metadata
+		token, err := GenerateJWT()
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate JWT"})
+		}
+		ctx := metadata.AppendToOutgoingContext(c.Context(), "authorization", "Bearer "+token)
+
 		// Call gRPC GetOrder method
-		resp, err := orderClient.GetOrder(c.Context(), &pb.GetOrderRequest{
+		resp, err := orderClient.GetOrder(ctx, &pb.GetOrderRequest{
 			OrderId: orderId,
 		})
 
