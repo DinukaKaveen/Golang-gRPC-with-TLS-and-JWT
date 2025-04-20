@@ -32,18 +32,24 @@ func GenerateJWT() (string, error) {
 }
 
 func main() {
-	// Load client TLS credentials
+	// Load client certificate and key
+	cert, err := tls.LoadX509KeyPair("certs/client.crt", "certs/client.key")
+	if err != nil {
+		log.Fatalf("Failed to load client certificate: %v", err)
+	}
+	// Load CA certificate
 	caCert, err := os.ReadFile("certs/ca.crt")
 	if err != nil {
 		log.Fatalf("Failed to read CA cert: %v", err)
 	}
-	certPool := x509.NewCertPool()
-	if !certPool.AppendCertsFromPEM(caCert) {
-		log.Fatalf("Failed to append CA cert")
-	}
+	caPool := x509.NewCertPool()
+	caPool.AppendCertsFromPEM(caCert)
+	
 	// Create TLS credentials
-	tlsConfig := &tls.Config {
-		RootCAs: certPool,
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      caPool,
+		ServerName:   "localhost", // should match CN in server cert
 	}
 	creds := credentials.NewTLS(tlsConfig)
 

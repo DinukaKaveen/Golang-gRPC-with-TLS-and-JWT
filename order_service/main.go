@@ -89,14 +89,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to read CA cert: %v", err)
 	}
-	certPool := x509.NewCertPool()
-	if !certPool.AppendCertsFromPEM(caCert) {
-		log.Fatalf("Failed to append CA cert")
-	}
-	// Create TLS credentials
-	tlsConfig := &tls.Config {
+	caPool := x509.NewCertPool()
+	caPool.AppendCertsFromPEM(caCert)
+
+	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
-		ClientCAs: certPool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    caPool,
 	}
 	creds := credentials.NewTLS(tlsConfig)
 
