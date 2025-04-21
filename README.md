@@ -33,6 +33,7 @@ openssl x509 -in order_service/certs/server.crt -text -noout
 **This ensures server.crt includes:**
 
 X509v3 Subject Alternative Name:
+
     DNS:localhost
     
 Subject: C = LK, ST = Southern, L = Matara, O = MyOrg, OU = Dev, CN = localhost
