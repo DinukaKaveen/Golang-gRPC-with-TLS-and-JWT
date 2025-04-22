@@ -37,3 +37,7 @@ X509v3 Subject Alternative Name:
    DNS:localhost
     
 Subject: C = LK, ST = Southern, L = Matara, O = MyOrg, OU = Dev, CN = localhost
+
+# Test APIs
+[POST] localhost:3000/users/user123/order
+[GET] localhost:3000/user/user123/orders/2
